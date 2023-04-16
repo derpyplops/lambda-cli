@@ -10,7 +10,7 @@ packages = [{include = "lambda_cli"}]
 lambda = "lambda_cli.main:app"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 typer = {extras = ["all"], version = "^0.7.0"}
 yaspin = "^2.3.0"
 bullet = "^2.2.0"
