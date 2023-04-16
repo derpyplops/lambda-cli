@@ -6,7 +6,7 @@ Decided to make a CLI for the Lambda GPU project. This is a work in progress, bu
 
 ```
 poetry build
-pip install --user ./dist/lambda_gpu_cli-0.1.0-py3-none-any.whl
+pip install --user ./dist/lambda_cli-0.1.0-py3-none-any.whl
 ```
 
 ## Usage
