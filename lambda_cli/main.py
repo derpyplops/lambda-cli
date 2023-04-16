@@ -44,8 +44,10 @@ def entry(name, ip):
 """
 
 
-@app.command()
-def new(ssh: bool = typer.Option(False, help="Add to ssh config at ~/.ssh/config")):
+@app.command(help="Provision a new GPU instance.")
+def new(
+    ssh: bool = typer.Option(False, help="Append an entry to ssh config at ~/.ssh/config")
+    ):
     with yaspin(Spinners.moon, "Loading Instances...") as spinner:
         instances = get_or_throw(requests.get(INSTANCE_TYPES_URL, auth=auth))
     available = {}
@@ -95,7 +97,7 @@ def new(ssh: bool = typer.Option(False, help="Add to ssh config at ~/.ssh/config
 
 
 
-@app.command()
+@app.command(help="Terminate a running instance.")
 def stop():
     with yaspin(Spinners.moon, "Loading Instances...") as spinner:
         instances = get_or_throw(requests.get(INSTANCES_URL, auth=auth))
@@ -124,7 +126,7 @@ def stop():
     print(f"Stopped successfully.")
 
 
-@app.command()
+@app.command(help="List running instances.")
 def ls():
     with yaspin(Spinners.moon, "Loading Instances...") as spinner:
         instances = get_or_throw(requests.get(INSTANCES_URL, auth=auth))
