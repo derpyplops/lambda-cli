@@ -7,11 +7,18 @@ import time
 import os
 from rich import print
 
-try:
+if "LAMBDA_KEY" in os.environ:
     key = os.environ["LAMBDA_KEY"]
-except Exception:
-    print("[bold red]error: LAMBDA_KEY is not set[/bold red]")
-    exit(1)
+elif os.path.exists(os.path.expanduser("~/.lambda_key")):
+    # load it from local cache
+    with open(os.path.expanduser("~/.lambda_key"), "r") as f:
+        key = f.read()
+else:
+    # ask user for it
+    key = typer.prompt("Enter your Lambda Labs API key:")
+    with open(os.path.expanduser("~/.lambda_key"), "w") as f:
+        f.write(key)
+
 
 INSTANCES_URL = "https://cloud.lambdalabs.com/api/v1/instances"
 INSTANCE_TYPES_URL = "https://cloud.lambdalabs.com/api/v1/instance-types"
@@ -19,8 +26,8 @@ LAUNCH_URL = "https://cloud.lambdalabs.com/api/v1/instance-operations/launch"
 TERMINATE_URL = "https://cloud.lambdalabs.com/api/v1/instance-operations/terminate"
 
 app = typer.Typer()
-
 auth = (key, "")
+
 
 def get_or_throw(request):
     if request.status_code == 200:
@@ -44,9 +51,16 @@ def entry(name, ip):
 
 @app.command(help="Provision a new GPU instance.")
 def new(
-        ssh: bool = typer.Option(True, "--ssh", "-s", help="Append an entry to ssh config at ~/.ssh/config"),
-        fast: bool = typer.Option(False, "--fast", "-f", help="Choose the cheapest option available and start it immediately."),
-    ):
+    ssh: bool = typer.Option(
+        True, "--ssh", "-s", help="Append an entry to ssh config at ~/.ssh/config"
+    ),
+    fast: bool = typer.Option(
+        False,
+        "--fast",
+        "-f",
+        help="Choose the cheapest option available and start it immediately.",
+    ),
+):
     with yaspin(Spinners.moon, "Loading Instances...") as spinner:
         instances = get_or_throw(requests.get(INSTANCE_TYPES_URL, auth=auth))
     available = {}
@@ -60,7 +74,9 @@ def new(
         print("No instances available.")
         return
     if fast:
-        result = min(available.values(), key=lambda x: x["instance_type"]["price_cents_per_hour"])
+        result = min(
+            available.values(), key=lambda x: x["instance_type"]["price_cents_per_hour"]
+        )
     else:
         ans = bullet.Bullet(
             prompt="Choose an instance type: ", choices=list(available.keys())
@@ -91,14 +107,13 @@ def new(
             )
             t += 1
             spinner.text = f"Instance Status [{t}s]: {instance['status']}"
-    
+
     if ssh:
         with open(os.path.expanduser("~/.ssh/config"), "a") as f:
             f.write(entry(name, instance["ip"]))
     else:
         print(f"Instance is ready! You can ssh to it with")
         print(f"> [bold green]ssh ubuntu@{instance['ip']}[/bold green]")
-
 
 
 @app.command(help="Terminate a running instance.")
