@@ -6,13 +6,11 @@ from yaspin.spinners import Spinners
 import time
 import os
 from rich import print
-from rich.console import Console
-console = Console()
 
 try:
     key = os.environ["LAMBDA_KEY"]
 except Exception:
-    console.print("error: LAMBDA_KEY is not set", style="red")
+    print("[bold red]error: LAMBDA_KEY is not set[/bold red]")
     exit(1)
 
 INSTANCES_URL = "https://cloud.lambdalabs.com/api/v1/instances"
@@ -46,7 +44,8 @@ def entry(name, ip):
 
 @app.command(help="Provision a new GPU instance.")
 def new(
-    ssh: bool = typer.Option(False, help="Append an entry to ssh config at ~/.ssh/config")
+        ssh: bool = typer.Option(True, "--ssh", "-s", help="Append an entry to ssh config at ~/.ssh/config"),
+        fast: bool = typer.Option(False, "--fast", "-f", help="Choose the cheapest option available and start it immediately."),
     ):
     with yaspin(Spinners.moon, "Loading Instances...") as spinner:
         instances = get_or_throw(requests.get(INSTANCE_TYPES_URL, auth=auth))
@@ -57,11 +56,16 @@ def new(
             cost = instance["instance_type"]["price_cents_per_hour"]
             rendered = f"{desc} | ${cost/100:.2f}/hr"
             available[rendered] = instance
-
-    ans = bullet.Bullet(
-        prompt="Choose an instance type: ", choices=list(available.keys())
-    )
-    result = available[ans.launch()]
+    if not available:
+        print("No instances available.")
+        return
+    if fast:
+        result = min(available.values(), key=lambda x: x["instance_type"]["price_cents_per_hour"])
+    else:
+        ans = bullet.Bullet(
+            prompt="Choose an instance type: ", choices=list(available.keys())
+        )
+        result = available[ans.launch()]
     name = get_random_memorable_name()
     config = {
         "region_name": result["regions_with_capacity_available"][0]["name"],
@@ -93,7 +97,7 @@ def new(
             f.write(entry(name, instance["ip"]))
     else:
         print(f"Instance is ready! You can ssh to it with")
-        print(f"> ssh ubuntu@{instance['ip']}", style="green")
+        print(f"> [bold green]ssh ubuntu@{instance['ip']}[/bold green]")
 
 
 
